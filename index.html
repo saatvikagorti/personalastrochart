@@ -70,9 +70,11 @@
   .sq-cell .sq-house{ font-family:'Cinzel', serif; font-size:10px; color:var(--dim); }
   .sq-cell .sq-sign{ font-family:'Cinzel', serif; font-size:11px; color:var(--gold-soft); margin-bottom:3px; }
   .sq-cell .sq-planets{ display:flex; flex-wrap:wrap; gap:5px; margin-top:2px; }
-  .sq-planet{ text-align:center; font-size:13px; color:var(--cream); }
-  .sq-planet .sub{ display:block; font-size:8px; color:var(--dim); }
+  .sq-planet{ text-align:center; font-size:13px; color:var(--cream); line-height:1.2; }
+  .sq-planet .sq-name{ display:block; font-size:7.5px; letter-spacing:.02em; color:var(--gold-soft); }
+  .sq-planet .sub{ display:block; font-size:7.5px; color:var(--dim); }
   .sq-planet.retro{ color:var(--rose); }
+  .sq-planet.retro .sq-name{ color:var(--rose); }
   .sq-center{
     grid-area:center; display:flex; align-items:center; justify-content:center;
     flex-direction:column; border:1px solid var(--line); background:rgba(201,162,77,0.06);
@@ -275,6 +277,15 @@
       </div>
     </div>
 
+    <div class="section-title">Bhava Chalit Chart</div>
+    <div class="chart-row">
+      <div class="wheel-box"><div class="square-chart" id="kpChalitChart"></div></div>
+      <div class="legend"><h3>Rasi vs. Chalit</h3>
+        <div class="legend-item">The Rasi chart above places each planet by zodiac sign. This chart instead places each planet by its true Placidus house (bhava) — the same houses used throughout this KP analysis.</div>
+        <div class="legend-item">A planet sitting close to a house cusp can shift into a neighboring box here even though its sign hasn't changed — that shift is exactly what a Chalit chart is meant to reveal.</div>
+      </div>
+    </div>
+
     <div class="section-title">Key Cuspal Sub Lords</div>
     <div class="cards">
       <div class="card">
@@ -412,6 +423,16 @@
             <div class="legend-item">Planet glyphs show their KP Sub Lord in small text beneath.</div>
           </div>
         </div>
+
+        <div class="section-title">Bhava Chalit Chart</div>
+        <div class="chart-row">
+          <div class="wheel-box"><div class="square-chart" id="ycKpChalitChart"></div></div>
+          <div class="legend"><h3>Rasi vs. Chalit</h3>
+            <div class="legend-item">The Rasi chart above places each planet by zodiac sign. This chart instead places each planet by its true Placidus house (bhava) — the same houses used throughout this KP analysis.</div>
+            <div class="legend-item">A planet sitting close to a house cusp can shift into a neighboring box here even though its sign hasn't changed — that shift is exactly what a Chalit chart is meant to reveal.</div>
+          </div>
+        </div>
+
         <div class="section-title">Key Cuspal Sub Lords</div>
         <div class="cards" id="ycKpCuspCards"></div>
         <div class="section-title">Moon's Star &amp; Sub Lord (Mind &amp; Emotion)</div>
@@ -438,7 +459,7 @@
           <div class="wheel-box"><div class="square-chart" id="ycNavamsaSquareChart"></div></div>
           <div class="legend"><h3>Reading the Chart</h3>
             <div class="legend-item">Each planet's position here comes from dividing its Rasi (D1) sign into nine parts — its Navamsa sign can differ completely from its main-chart sign.</div>
-            <div class="legend-item">This chart has its own Lagna (D9 ascendant), shown at center, distinct from your main Lagna.</div>
+            <div class="legend-item">Houses are numbered from your main Lagna, same as the Krishnamurti chart above. Your separate D9 (Navamsa) ascendant point is called out in the cards below instead of used for house numbering here.</div>
           </div>
         </div>
         <div class="cards" id="ycNavamsaCards"></div>
@@ -775,7 +796,7 @@ function renderSquareChart(containerId, planets, lagnaSignIdx, opts){
     const planetsHere = bySign[i]||[];
     let planetHtml = '';
     planetsHere.forEach(p=>{
-      planetHtml += `<div class="sq-planet${p.retro?' retro':''}">${p.symbol}${showSubLord?`<span class="sub">${p.subLord.slice(0,2)}</span>`:''}</div>`;
+      planetHtml += `<div class="sq-planet${p.retro?' retro':''}">${p.symbol}<span class="sq-name">${p.name}</span>${showSubLord?`<span class="sub">${p.subLord.slice(0,2)}</span>`:''}</div>`;
     });
     html += `<div class="sq-cell" style="grid-area:${SIGN_AREA[i]};">
       <span class="sq-house">H${houseNum}</span>
@@ -1028,6 +1049,16 @@ function houseOfLongitude(lon, cusps){
 }
 
 function kpAyanamsaApprox(jd){ return lahiriAyanamsaApprox(jd) - 0.097; }
+
+// Bhava Chalit: places each planet in whichever sign-box currently carries its TRUE Placidus house
+// number (via houseOfLongitude), rather than the box matching its raw zodiac sign — the box labels
+// and rotation stay identical to the Rasi/Krishnamurti chart, only planet placement changes.
+function buildChalitPlanets(planets, cuspsAbs, lagnaSignIdx){
+  return planets.map(p=>{
+    const bhava = houseOfLongitude(p.lon, cuspsAbs);
+    return {...p, signIdx: (lagnaSignIdx + bhava - 1) % 12};
+  });
+}
 
 function navamsaSignIndex(rashiIdx, degInSign){
   const padaIdx = Math.min(8, Math.floor(degInSign*9/30));
@@ -1615,7 +1646,9 @@ function generateUserChart(){
   fillKpOwnershipTable('ycKpOwnershipTable', chart.kpCuspsAbsUser);
   fillKpCuspTable('ycKpCuspTable', chart.kpCuspsAbsUser);
   fillKpPlanetTable('ycKpPlanetTable', chart.kpPlanetsRawUser);
-  renderSquareChart('ycKpSquareChart', chart.kpPlanetsRawUser, signOf(chart.kpCuspsAbsUser[0]).idx);
+  const ycKpLagnaSignIdx = signOf(chart.kpCuspsAbsUser[0]).idx;
+  renderSquareChart('ycKpSquareChart', chart.kpPlanetsRawUser, ycKpLagnaSignIdx);
+  renderSquareChart('ycKpChalitChart', buildChalitPlanets(chart.kpPlanetsRawUser, chart.kpCuspsAbsUser, ycKpLagnaSignIdx), ycKpLagnaSignIdx, {centerLabel:'CHALIT'});
 
   function subLordOwnership(subLord){
     const owned = [];
@@ -1643,7 +1676,9 @@ function generateUserChart(){
     moonKp.starLord+' as your Moon\'s Star Lord shapes '+PLANET_TRAIT[moonKp.starLord]+', while '+moonKp.subLord+' as Sub Lord adds '+PLANET_TRAIT[moonKp.subLord]+'.', 2);
 
   /* ---- Navamsa ---- */
-  renderSquareChart('ycNavamsaSquareChart', chart.navamsaPlanets, chart.navamsaLagnaSign, {showSubLord:false, centerLabel:'NAVAMSA'});
+  // Houses are numbered from the real (Rasi) Lagna sign, same rotation rule as the Krishnamurti chart —
+  // not from the separately-derived D9 Navamsa Lagna, which is shown below as its own data point instead.
+  renderSquareChart('ycNavamsaSquareChart', chart.navamsaPlanets, signOf(chart.vedicLagna).idx, {showSubLord:false, centerLabel:'NAVAMSA'});
   const venusNav = chart.navamsaPlanets.find(p=>p.name==='Venus'), jupiterNav = chart.navamsaPlanets.find(p=>p.name==='Jupiter');
   const navCards = [];
   navCards.push(cardHTML('Navamsa Lagna', SIGNS[chart.navamsaLagnaSign].name,
@@ -1682,7 +1717,9 @@ fillDashaTable('dashaTable', DASHA_SEQUENCE);
 fillKpPlanetTable('kpPlanetTable', kpPlanetsRaw);
 fillKpCuspTable('kpCuspTable', kpCuspsAbs);
 fillKpOwnershipTable('kpOwnershipTable', kpCuspsAbs);
-renderSquareChart('kpSquareChart', kpPlanetsRaw, signOf(kpCuspsAbs[0]).idx);
+const kpLagnaSignIdx = signOf(kpCuspsAbs[0]).idx;
+renderSquareChart('kpSquareChart', kpPlanetsRaw, kpLagnaSignIdx);
+renderSquareChart('kpChalitChart', buildChalitPlanets(kpPlanetsRaw, kpCuspsAbs, kpLagnaSignIdx), kpLagnaSignIdx, {centerLabel:'CHALIT'});
 
 populateOffsetSelects();
 document.getElementById('matchBtn').addEventListener('click', computeMilan);
